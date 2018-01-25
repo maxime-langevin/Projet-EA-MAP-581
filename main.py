@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -17,7 +16,7 @@ t_tab = np.linspace(0 , 500 , nbre_points)
 A = 1
 
 P_sin=0.5
-T_sinusoidale=10
+T_sinusoidale=50
 phi=np.pi*2
 offset=-0.1
 
@@ -114,6 +113,42 @@ def P_sinusoidale(t,P_sin,T,phi,offset):
 def P_sinusoidale_tab(t_tab,P_sin,T,phi,offset):
     return np.array([ offset+P_sin*np.sin((t/T*2*np.pi)+phi) for t in t_tab])
 
+def trace_phase_diagramm(commande):
+    sol = odeint(X_prime, [0, 0], t_tab, args = ( A, E0, I0, wEE, wEI, wII, wIE, alpha_E, alpha_I, w, phi,commande))
+    
+    if commande=="creneau":
+        P=P_creneau_tab(t_tab,Pmin_creneau,Pmax_creneau,T_creneau)
+    elif commande=="constante":
+        P=P_constante_tab(t_tab,P_const)
+    elif commande=="sinusoidale":
+        P=P_sinusoidale_tab(t_tab,P_sin,T_sinusoidale,phi,offset)
+    
+    plt.figure()
+    plt.plot()
+    
+    plt.title('Diagramme de phase de XE')
+    plt.ylabel('dXE/dt')
+    plt.xlabel('XE')
+    
+    dxe=[(sol[i+1,0]-sol[i,0])/(500/nbre_points) for i in range(len(sol[:, 0])-1)]
+    dxe.append(dxe[-1])
+    plt.plot(sol[:, 0],dxe,'r')
+    plt.savefig("Fig1")
+   
+    
+    plt.figure()
+    plt.plot()
+    
+    plt.title('Diagramme de phase de XI')
+    plt.ylabel('dXI/dt')
+    plt.xlabel('XI')
+    
+    dxi=[(sol[i+1,1]-sol[i,1])/(500/nbre_points) for i in range(len(sol[:, 1])-1)]
+    dxi.append(dxi[-1])
+    plt.plot(sol[:, 1],dxi,'g')
+    plt.savefig("Fig2")
+    plt.show()
+
 
 def trace_plot(commande):
     sol = odeint(X_prime, [0, 0], t_tab, args = ( A, E0, I0, wEE, wEI, wII, wIE, alpha_E, alpha_I, w, phi,commande))
@@ -127,26 +162,32 @@ def trace_plot(commande):
     
     plt.figure()
     plt.plot()
+    
+    plt.title('Evolution de XE, P et EO')
+    plt.ylabel('Amplitude')
+    plt.xlabel('Temps')
+    
     plt.plot(t_tab, sol[:, 0],'r')
     plt.plot(t_tab, P)
-    
     plt.plot(t_tab, E0 + alpha_E * np.cos(w * t_tab))
-    
     plt.savefig("Fig1")
    
     
     plt.figure()
     plt.plot()
     
-    plt.plot(t_tab, P)
+    plt.title('Evolution de XI, P et EO')
+    plt.ylabel('Amplitude')
+    plt.xlabel('Temps')
     
+    plt.plot(t_tab, P)
     plt.plot(t_tab, E0 + alpha_E * np.cos(w * t_tab))
     plt.plot(t_tab, sol[:, 1],'g')
     plt.savefig("Fig2")
     plt.show()
 
+trace_plot("sinusoidale")
+trace_phase_diagramm("sinusoidale")
 
-trace_plot("constante")
-#trace_plot("sinusoidale")
-#trace_plot("creneau")
+
 
