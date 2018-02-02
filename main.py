@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Jan 19 17:07:56 2018
-
 @author: maxime
 """
 
@@ -24,16 +23,16 @@ Pmax_creneau = 0.5
 Pmin_creneau=0
 T_creneau=50
 
-P_const=0.5
+P_const=0.01
 
 T=250
-alpha_E = 0.05 
-alpha_I = 0.05
+alpha_E = 0.15
+alpha_I = 0.15
 w = 0.05
 phi = 0
 
-E0 = 0.2
-I0 = 0.2
+E0 = 0.15
+I0 = 0.15
 
 wEE = 27
 wEI = 50
@@ -42,12 +41,12 @@ wII = 0
 
 def SE(XE, XI, P, E0, wEE, wEI, wII, wIE):
     exp_value = np.exp(-wEE*XE + wIE*XI - P)
-    D = 1 + ( 1 / E0 - 2 ) * exp_value
+    D = ( 1 / E0 - 2 ) * exp_value
     return 1 / ( 1 + D )
 
 def SI(XE, XI, I0, wEE, wEI, wII, wIE):
     exp_value = np.exp(-wEI*XE + wII*XI)
-    D = 1 + ( 1 / I0 - 2 ) * exp_value
+    D =( 1 / I0 - 2 ) * exp_value
     return 1 / ( 1 + D )
 
 def XE_prime(XE, XI, P, E0, wEE, wEI, wII, wIE):
@@ -66,6 +65,19 @@ def X_prime(X, t, A, E0, I0, wEE, wEI, wII, wIE, alpha_E, alpha_I, w, phi,comman
         P=P_constante(t,P_const)
     elif commande=="sinusoidale":
         P=P_sinusoidale(t,P_sin,T,phi,offset)
+    elif commande=="stop_oscillations":
+        threshold=-2*E0_t**2+E0_t
+        
+        if -threshold+2/wEE>0:
+            P=P_constante(t,P_const)
+        else:
+            P=P_constante(t,P_const)+XE*(wEE-1/threshold)
+        #P=P_constante(t,P_const)+XE*(wEE-1/threshold)
+        #P=P_constante(t,P_const)+XE*(wEE-1)
+
+        #P=P_constante(t,P_const)+np.log(XE)*(wEE-1)
+        
+        
     
     
     rep = [XE_prime(XE, XI, P, E0_t, wEE, wEI, wII, wIE), XI_prime(XE, XI, A, I0_t, wEE, wEI, wII, wIE)]
@@ -113,43 +125,6 @@ def P_sinusoidale(t,P_sin,T,phi,offset):
 def P_sinusoidale_tab(t_tab,P_sin,T,phi,offset):
     return np.array([ offset+P_sin*np.sin((t/T*2*np.pi)+phi) for t in t_tab])
 
-def trace_phase_diagramm(commande):
-    sol = odeint(X_prime, [0, 0], t_tab, args = ( A, E0, I0, wEE, wEI, wII, wIE, alpha_E, alpha_I, w, phi,commande))
-    
-    if commande=="creneau":
-        P=P_creneau_tab(t_tab,Pmin_creneau,Pmax_creneau,T_creneau)
-    elif commande=="constante":
-        P=P_constante_tab(t_tab,P_const)
-    elif commande=="sinusoidale":
-        P=P_sinusoidale_tab(t_tab,P_sin,T_sinusoidale,phi,offset)
-    
-    plt.figure()
-    plt.plot()
-    
-    plt.title('Diagramme de phase de XE')
-    plt.ylabel('dXE/dt')
-    plt.xlabel('XE')
-    
-    dxe=[(sol[i+1,0]-sol[i,0])/(500/nbre_points) for i in range(len(sol[:, 0])-1)]
-    dxe.append(dxe[-1])
-    plt.plot(sol[:, 0],dxe,'r')
-    plt.savefig("Fig1")
-   
-    
-    plt.figure()
-    plt.plot()
-    
-    plt.title('Diagramme de phase de XI')
-    plt.ylabel('dXI/dt')
-    plt.xlabel('XI')
-    
-    dxi=[(sol[i+1,1]-sol[i,1])/(500/nbre_points) for i in range(len(sol[:, 1])-1)]
-    dxi.append(dxi[-1])
-    plt.plot(sol[:, 1],dxi,'g')
-    plt.savefig("Fig2")
-    plt.show()
-
-
 def trace_plot(commande):
     sol = odeint(X_prime, [0, 0], t_tab, args = ( A, E0, I0, wEE, wEI, wII, wIE, alpha_E, alpha_I, w, phi,commande))
     
@@ -160,6 +135,11 @@ def trace_plot(commande):
     elif commande=="sinusoidale":
         P=P_sinusoidale_tab(t_tab,P_sin,T_sinusoidale,phi,offset)
     
+    
+    
+    racines=np.roots([2, -1, (2/wEE)])
+    
+    
     plt.figure()
     plt.plot()
     
@@ -168,8 +148,15 @@ def trace_plot(commande):
     plt.xlabel('Temps')
     
     plt.plot(t_tab, sol[:, 0],'r')
-    plt.plot(t_tab, P)
+    #plt.plot(t_tab, P)
+    
+#    plt.plot([0,t_tab[-1]],[racines[0],racines[0]])
+#    plt.plot([0,t_tab[-1]],[racines[-1],racines[-1]])
+    
     plt.plot(t_tab, E0 + alpha_E * np.cos(w * t_tab))
+
+    plt.plot(t_tab,  2*(E0 + alpha_E * np.cos(w * t_tab))**2-(E0 + alpha_E * np.cos(w * t_tab))+2/wEE)
+    
     plt.savefig("Fig1")
    
     
@@ -180,14 +167,13 @@ def trace_plot(commande):
     plt.ylabel('Amplitude')
     plt.xlabel('Temps')
     
-    plt.plot(t_tab, P)
+    #plt.plot(t_tab, P)
     plt.plot(t_tab, E0 + alpha_E * np.cos(w * t_tab))
+    
     plt.plot(t_tab, sol[:, 1],'g')
     plt.savefig("Fig2")
     plt.show()
 
-trace_plot("sinusoidale")
-trace_phase_diagramm("sinusoidale")
-
-
-
+trace_plot("stop_oscillations")
+#trace_plot("constante")
+#trace_phase_diagramm("constante")
